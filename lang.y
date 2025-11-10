@@ -102,7 +102,7 @@ glob_decl_list : glob_var_list glob_fun_list {}
 
 glob_var_list : glob_var_list decl PV {}
 | {printf("void init_glob_var(){\n"); // starting  function init_glob_var() definition in target code
-;
+;}
 
 glob_fun_list : glob_fun_list fun {}
 | fun {}
@@ -245,24 +245,24 @@ while : WHILE                 {}
 ;
 
 
-// V. Expressions
+  // V. Expressions
 
-exp
-// V.1 Exp. arithmetiques
-: MOINS exp %prec UNA         {}
-         // -x + y lue comme (- x) + y  et pas - (x + y)
-| exp PLUS exp                {}
-| exp MOINS exp               {}
-| exp STAR exp                {}
-| exp DIV exp                 {}
-| PO exp PF                   {}
-| ID                          {}
-| app                         {}
-| NUM                         {}
-| DEC                         {}
+  exp
+  // V.1 Exp. arithmetiques
+  : MOINS exp %prec UNA         {printf("NEGI\n");}
+          // -x + y lue comme (- x) + y  et pas - (x + y)
+  | exp PLUS exp                {printf("ADDI\n");}
+  | exp MOINS exp               {printf("SUBI\n");}
+  | exp STAR exp                {printf("MULTI\n");}
+  | exp DIV exp                 {printf("DIVI\n");}
+  | PO exp PF                   {}
+  | ID                          {}
+  | app                         {}
+  | NUM                         {printf("LOADI(%i)\n",$1);}
+  | DEC                         {printf("LOADF(%f)\n",$1);}
 
 
-// V.2. Booléens
+  // V.2. Booléens
 
 | NOT exp %prec UNA           {}
 | exp INF exp                 {}
