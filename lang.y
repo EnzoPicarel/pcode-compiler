@@ -15,7 +15,6 @@ void yyerror (char* s) {
   }
 		
 int depth=0; // block depth
- 
 
 %}
 
@@ -81,6 +80,31 @@ void end_glob_var_decl(){
 
 // Votre code C peut aller ci-dessous pour factoriser (un peu) le code des actions semantiques
  
+
+ int make_code_aryth(int type1, const char* op, int type2) {
+    int result_type;
+
+    if (type1 == INT && type2 == INT) {
+        printf("%sI\n", op);
+        result_type = INT;
+    } else if (type1 == FLOAT && type2 == FLOAT) {
+        printf("%sF\n", op);
+        result_type = FLOAT;
+    } else if (type1 == INT && type2 == FLOAT) {
+        printf("I2F1\n");
+        printf("%sF\n", op);
+        result_type = FLOAT;
+    } else if (type1 == FLOAT && type2 == INT) {
+        printf("I2F2\n");
+        printf("%sF\n", op);
+        result_type = FLOAT;
+    } else {
+        yyerror("Erreur de type pour opération binaire !");
+    }
+
+    return result_type;
+}
+
   %}
 
 
@@ -251,15 +275,15 @@ while : WHILE                 {}
   // V.1 Exp. arithmetiques
   : MOINS exp %prec UNA         {printf("NEGI\n");}
           // -x + y lue comme (- x) + y  et pas - (x + y)
-  | exp PLUS exp                {printf("ADDI\n");}
-  | exp MOINS exp               {printf("SUBI\n");}
-  | exp STAR exp                {printf("MULTI\n");}
-  | exp DIV exp                 {printf("DIVI\n");}
+  | exp PLUS exp                {$$ = make_code_aryth($1, "ADD", $3);}
+  | exp MOINS exp               {$$ = make_code_aryth($1, "SUB", $3);}
+  | exp STAR exp                {$$ = make_code_aryth($1, "MULT", $3);}
+  | exp DIV exp                 {$$ = make_code_aryth($1, "DIV", $3);}
   | PO exp PF                   {}
   | ID                          {}
   | app                         {}
-  | NUM                         {printf("LOADI(%i)\n",$1);}
-  | DEC                         {printf("LOADF(%f)\n",$1);}
+  | NUM                         {printf("LOADI(%i)\n",$1); $$ = INT;}
+  | DEC                         {printf("LOADF(%f)\n",$1); $$ = FLOAT;}
 
 
   // V.2. Booléens
@@ -293,6 +317,10 @@ arglist : arglist VIR exp     {} // récursion gauche pour empiler les arguement
 
 
 %% 
+
+
+
+
 int main () {
 
   /* Ici on peut ouvrir le fichier source, avec les messages 
