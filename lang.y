@@ -18,6 +18,7 @@ void yyerror (char* s) {
 int depth=0; // block depth
 int global_offset=0; // global variable offset
 int current_type; // current type for declarations
+char * current_fun_name; // current function name
 
 %}
 
@@ -143,11 +144,13 @@ fun : type fun_head fun_body   {}
 po: PO {end_glob_var_decl();}  // dirty trick to end function init_glob_var() definition in target code
   
 fun_head : ID po PF            {
+  current_fun_name = $1;
   // Pas de déclaration de fonction à l'intérieur de fonctions !
   if (depth>0) yyerror("Function must be declared at top level~!\n");
   }
 
 | ID po params PF              {
+   current_fun_name = $1;
    // Pas de déclaration de fonction à l'intérieur de fonctions !
   if (depth>0) yyerror("Function must be declared at top level~!\n");
  }
@@ -160,10 +163,18 @@ params: type ID vir params     {} // récursion droite pour numéroter les param
 vir : VIR                      {}
 ;
 
-fun_body : fao block faf       {}
+fun_body : fao block faf       {
+  if (strcmp(current_fun_name, "main") == 0) {
+    printf("}\n");
+  }
+}
 ;
 
-fao : AO                       {}
+fao : AO                       {
+  if (strcmp(current_fun_name, "main") == 0) {
+    printf("void pcode_main() {\n");
+  }
+}
 ;
 faf : AF                       {}
 ;
