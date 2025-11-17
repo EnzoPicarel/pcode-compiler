@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
   
 extern int yylex();
 extern int yyparse();
@@ -15,6 +16,8 @@ void yyerror (char* s) {
   }
 		
 int depth=0; // block depth
+int global_offset=0; // global variable offset
+int current_type; // current type for declarations
 
 %}
 
@@ -183,12 +186,32 @@ decl: var_decl                  {}
 var_decl : type vlist          {}
 ;
 
-vlist: vlist vir ID            {} // récursion gauche pour traiter les variables déclararées de gauche à droite
-| ID                           {}
+vlist: vlist vir ID            { 
+  attribute attr = makeSymbol(current_type, depth==0 ? global_offset++ : 0, depth);
+  set_symbol_value($3, attr);
+  if (depth == 0) {
+    if (current_type == INT) {
+      printf("LOADI(0)\n");
+    } else {
+      printf("LOADF(0.0)\n");
+    }
+  }
+} // récursion gauche pour traiter les variables déclararées de gauche à droite
+| ID                           {
+  attribute attr = makeSymbol(current_type, depth==0 ? global_offset++ : 0, depth);
+  set_symbol_value($1, attr);
+  if (depth == 0) {
+    if (current_type == INT) {
+      printf("LOADI(0)\n");
+    } else {
+      printf("LOADF(0.0)\n");
+    }
+  }
+}
 ;
 
 type
-: typename                     {}
+: typename                     { current_type = $$; }
 ;
 
 typename // Utilisation des terminaux comme codage (entier) du type !!!
@@ -227,7 +250,16 @@ af : AF                       {}
 
 // IV.1 Affectations
 
-aff : ID EQ exp               {}
+aff : ID EQ exp               {
+  attribute attr = get_symbol_value($1);
+  if (attr == NULL) yyerror("Variable non déclarée");
+  if (attr->type == INT && $3 == FLOAT) {
+    yyerror("Type incompatible: cannot assign float to int");
+  } else if (attr->type == FLOAT && $3 == INT) {
+    printf("I2F2\n");
+  }
+  printf("LOADI(0)\nSHIFT(%d)\nSTORE\n", attr->offset);
+}
 ;
 
 
@@ -280,7 +312,12 @@ while : WHILE                 {}
   | exp STAR exp                {$$ = make_code_aryth($1, "MULT", $3);}
   | exp DIV exp                 {$$ = make_code_aryth($1, "DIV", $3);}
   | PO exp PF                   {}
-  | ID                          {}
+  | ID                          {
+    attribute attr = get_symbol_value($1);
+    if (attr == NULL) yyerror("Variable non déclarée");
+    printf("LOADI(0)\nSHIFT(%d)\nLOAD\n", attr->offset);
+    $$ = attr->type;
+  }
   | app                         {}
   | NUM                         {printf("LOADI(%i)\n",$1); $$ = INT;}
   | DEC                         {printf("LOADF(%f)\n",$1); $$ = FLOAT;}
@@ -329,7 +366,7 @@ int main () {
    */
 
 char * header=
-"// PCode Header\n\
+"// Begin PCode Header\n\
 #include \"PCode.h\"\n\
 \n\
 void pcode_main();\n\
@@ -340,6 +377,7 @@ init_glob_var();\n\
 pcode_main();\n\
 return stack[sp-1].int_value;\n\
 }\n\
+// End PCode Header\
 \n";  
 
 printf("%s\n",header); // ouput header
