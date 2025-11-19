@@ -15,10 +15,14 @@ void yyerror (char* s) {
   exit(0);
   }
 		
-int depth=0; // block depth
-int global_offset=0; // global variable offset
-int current_type; // current type for declarations
-char * current_fun_name; // current function name
+int depth=0;
+
+int global_offset=0;
+int current_type;
+
+char * current_fun_name;
+
+int label_count = 0;
 
 %}
 
@@ -95,11 +99,11 @@ void end_glob_var_decl(){
         printf("%sF\n", op);
         result_type = FLOAT;
     } else if (type1 == INT && type2 == FLOAT) {
-        printf("I2F1\n");
+        printf("I2F1 // converting first arg to float\n");
         printf("%sF\n", op);
         result_type = FLOAT;
     } else if (type1 == FLOAT && type2 == INT) {
-        printf("I2F2\n");
+        printf("I2F2 // converting second arg to float\n");
         printf("%sF\n", op);
         result_type = FLOAT;
     } else {
@@ -117,6 +121,7 @@ void end_glob_var_decl(){
 // liste de tous les type des attributs des non terminaux que vous voulez manipuler l'attribut (il faudra en ajouter plein ;-) )
 %type <type_value> type exp  typename
 %type <string_value> fun_head
+%type <int_value> if else while
 
 %%
 
@@ -170,13 +175,18 @@ fun_body : fao block faf       {
 }
 ;
 
-fao : AO                       {
+fao : AO {
   if (strcmp(current_fun_name, "main") == 0) {
+    depth++;                    // profondeur 1 dans la fonction
     printf("void pcode_main() {\n");
   }
 }
 ;
-faf : AF                       {}
+faf : AF {
+  if (strcmp(current_fun_name, "main") == 0) {
+    depth--;
+  }
+}
 ;
 
 
@@ -252,10 +262,10 @@ ao block af                   {}
 
 // Accolades explicites pour gerer l'entrée et la sortie d'un sous-bloc
 
-ao : AO                       {}
+ao : AO { depth++; printf("SAVEBP // entering block\n"); }
 ;
 
-af : AF                       {}
+af : AF { printf("RESTOREBP // exiting block\n"); depth--; }
 ;
 
 
@@ -267,9 +277,9 @@ aff : ID EQ exp               {
   if (attr->type == INT && $3 == FLOAT) {
     yyerror("Type incompatible: cannot assign float to int");
   } else if (attr->type == FLOAT && $3 == INT) {
-    printf("I2F2\n");
+    printf("I2F2 // converting second arg to float\n");
   }
-  printf("LOADI(0)\nSHIFT(%d)\nSTORE\n", attr->offset);
+  printf("LOADI(%d)\nSTORE\n", attr->offset);
 }
 ;
 
@@ -285,17 +295,47 @@ ret : RETURN exp              {}
 //           avec ELSE en entrée (voir y.output)
 
 cond :
-if bool_cond inst  elsop       {}
+  if bool_cond 
+    { 
+      printf("IFN(False_%d)\n", $1); 
+      printf("// la condition %d est vraie\n", $1);
+    }
+  inst  
+  elsop       
+    {
+      printf("// Fin conditionelle %d\n", $1);
+    }
 ;
 
-elsop : else inst              {}
-|                  %prec IFX   {} // juste un "truc" pour éviter le message de conflit shift / reduce
+elsop : 
+  else 
+  { 
+    int id = $<label_value>-3; 
+    printf("GOTO(End_%d)\n", id);
+    printf("False_%d:\n", id);
+    printf("// la condition %d est fausse\n", id);
+  }
+  inst              
+  {
+    int id = $<label_value>-3; 
+    printf("End_%d:\n", id);
+  }
+| %prec IFX   
+  { 
+    int id = $<label_value>-3;
+    printf("False_%d:\n", id);
+    printf("// la condition %d est fausse\n", id);
+  } 
 ;
 
 bool_cond : PO exp PF         {}
 ;
 
-if : IF                       {}
+if : IF                       
+    { 
+      $$ = label_count++; 
+      printf("// Debut conditionelle %d\n", $$);
+    }
 ;
 
 else : ELSE                   {}
@@ -303,19 +343,33 @@ else : ELSE                   {}
 
 // IV.4. Iterations
 
-loop : while while_cond inst  {}
+loop : while while_cond 
+    {
+      printf("IFN(EndLoop_%d)\n", $1);
+      printf("// Debut boucle while %d\n", $1);
+    }
+  inst
+    {
+      printf("GOTO(StartLoop_%d)\n", $1);
+      printf("//Fin boucle while %d\n", $1);
+      printf("EndLoop_%d:\n", $1);
+    }
 ;
 
 while_cond : PO exp PF        {}
 
-while : WHILE                 {}
+while : WHILE                 
+    { 
+      $$ = label_count++; 
+      printf("StartLoop_%d: // chargement condition boucle while %d\n", $$, $$); 
+    }
 ;
 
 
-  // V. Expressions
+// V. Expressions
 
   exp
-  // V.1 Exp. arithmetiques
+// V.1 Exp. arithmetiques
   : MOINS exp %prec UNA         {printf("NEGI\n");}
           // -x + y lue comme (- x) + y  et pas - (x + y)
   | exp PLUS exp                {$$ = make_code_aryth($1, "ADD", $3);}
@@ -326,7 +380,7 @@ while : WHILE                 {}
   | ID                          {
     attribute attr = get_symbol_value($1);
     if (attr == NULL) yyerror("Variable non déclarée");
-    printf("LOADI(0)\nSHIFT(%d)\nLOAD\n", attr->offset);
+    printf("LOADI(%d)\nLOAD\n", attr->offset);
     $$ = attr->type;
   }
   | app                         {}
@@ -334,15 +388,19 @@ while : WHILE                 {}
   | DEC                         {printf("LOADF(%f)\n",$1); $$ = FLOAT;}
 
 
-  // V.2. Booléens
+// V.2. Booléens
 
-| NOT exp %prec UNA           {}
-| exp INF exp                 {}
-| exp SUP exp                 {}
-| exp EQUAL exp               {}
-| exp DIFF exp                {}
-| exp AND exp                 {}
-| exp OR exp                  {}
+| NOT exp %prec UNA           
+    { 
+      printf("NOT\n"); 
+      $$ = INT; 
+    }
+| exp INF exp                 { $$ = make_code_aryth($1, "LT", $3); }
+| exp SUP exp                 { $$ = make_code_aryth($1, "GT", $3); }
+| exp EQUAL exp               { $$ = make_code_aryth($1, "EQ", $3); }
+| exp DIFF exp                { $$ = make_code_aryth($1, "NEQ", $3); }
+| exp AND exp                 { $$ = make_code_aryth($1, "AND", $3); }
+| exp OR exp                  { $$ = make_code_aryth($1, "OR", $3); }
 
 ;
 
@@ -396,5 +454,5 @@ printf("%s\n",header); // ouput header
 return yyparse (); // output your compilation
  
  
-} 
+}
 

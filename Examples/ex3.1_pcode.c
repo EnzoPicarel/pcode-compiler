@@ -12,24 +12,32 @@ return stack[sp-1].int_value;
 // End PCode Header
 
 void init_glob_var(){
+// Declare x of type int with offset 0 at depth 0
 LOADI(0)
+
+// Declare y of type int with offset 1 at depth 0
 LOADI(0)
+
 }
 
 void pcode_main() {
 LOADI(3)
-LOADI(0)
-SHIFT(0)
+// Loading global var x adress (used at depth 1)
+LOADI(0) // loading offset 0 of variable x
+// Storing variable x (right) value
 STORE
 LOADI(5)
-LOADI(0)
-SHIFT(1)
+// Loading global var y adress (used at depth 1)
+LOADI(1) // loading offset 1 of variable y
+// Storing variable y (right) value
 STORE
-LOADI(0)
-SHIFT(0)
+// Loading global var x adress (used at depth 1)
+LOADI(0) // loading offset 0 of variable x
+// Loading variable x (right) value
 LOAD
-LOADI(0)
-SHIFT(1)
+// Loading global var y adress (used at depth 1)
+LOADI(1) // loading offset 1 of variable y
+// Loading variable y (right) value
 LOAD
 ADDI
 }
