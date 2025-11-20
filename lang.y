@@ -115,6 +115,26 @@ void end_glob_var_decl(){
     return result_type;
 }
 
+/* Gère les comparaisons (renvoie toujours un INT) */
+int make_code_rel(int type1, const char* op, int type2) {
+    if (type1 == INT && type2 == FLOAT) {
+        printf("I2F1 // converting first arg to float\n");
+        printf("%sF\n", op);
+    } 
+    else if (type1 == FLOAT && type2 == INT) {
+        printf("I2F2 // converting second arg to float\n");
+        printf("%sF\n", op);
+    } 
+    else if (type1 == FLOAT && type2 == FLOAT) {
+        printf("%sF\n", op);
+    } 
+    else {
+        printf("%sI\n", op);
+    }
+
+    return INT; 
+}
+
   %}
 
 
@@ -435,12 +455,22 @@ while : WHILE
       printf("NOT\n"); 
       $$ = INT; 
     }
-| exp INF exp                 { $$ = make_code_aryth($1, "LT", $3); }
-| exp SUP exp                 { $$ = make_code_aryth($1, "GT", $3); }
-| exp EQUAL exp               { $$ = make_code_aryth($1, "EQ", $3); }
-| exp DIFF exp                { $$ = make_code_aryth($1, "NEQ", $3); }
-| exp AND exp                 { $$ = make_code_aryth($1, "AND", $3); }
-| exp OR exp                  { $$ = make_code_aryth($1, "OR", $3); }
+| exp INF exp                 { $$ = make_code_rel($1, "LT", $3); }
+| exp SUP exp                 { $$ = make_code_rel($1, "GT", $3); }
+| exp EQUAL exp               { $$ = make_code_rel($1, "EQ", $3); }
+| exp DIFF exp                { $$ = make_code_rel($1, "NEQ", $3); }
+| exp AND exp                 
+    { 
+      if($1==FLOAT || $3==FLOAT) yyerror("Pas de ET logique sur les floats");
+      printf("AND\n"); 
+      $$ = INT; 
+    }
+| exp OR exp                  
+    { 
+      if($1==FLOAT || $3==FLOAT) yyerror("Pas de OU logique sur les floats");
+      printf("OR\n"); 
+      $$ = INT; 
+    }
 
 ;
 
