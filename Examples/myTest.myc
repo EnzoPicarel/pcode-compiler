@@ -1,0 +1,11 @@
+int g1, g2;
+
+void main() {
+    int l1, l2;
+    if (l1) {
+       int l3;
+       l3 = 4;
+    }
+    l1 = 2;
+    g2 = l1;
+}
