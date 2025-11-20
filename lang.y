@@ -17,7 +17,9 @@ void yyerror (char* s) {
 		
 int depth=0;
 
-int global_offset=0;
+int global_offset = 0;
+int local_offset = 0;
+
 int current_type;
 
 char * current_fun_name;
@@ -197,8 +199,15 @@ decl_list inst_list            {}
 
 // III. Declarations
 
-decl_list : decl_list decl PV   {} 
-|                               {}
+decl_list : decl_list decl PV   
+    { 
+    } 
+|                            
+    {
+       if (depth == 1) {
+           local_offset = 0;
+       }
+    }
 ;
 
 decl: var_decl                  {}
@@ -208,25 +217,39 @@ var_decl : type vlist          {}
 ;
 
 vlist: vlist vir ID            { 
-  attribute attr = makeSymbol(current_type, depth==0 ? global_offset++ : 0, depth);
-  set_symbol_value($3, attr);
+  int current_offset;
+  
   if (depth == 0) {
-    if (current_type == INT) {
-      printf("LOADI(0)\n");
-    } else {
-      printf("LOADF(0.0)\n");
-    }
+      current_offset = global_offset++;
+  } else {
+      current_offset = local_offset++;
+  }
+
+  attribute attr = makeSymbol(current_type, current_offset, depth);
+  set_symbol_value($3, attr);
+
+  if (current_type == INT) {
+    printf("LOADI(0)\n");
+  } else {
+    printf("LOADF(0.0)\n");
   }
 } // récursion gauche pour traiter les variables déclararées de gauche à droite
 | ID                           {
-  attribute attr = makeSymbol(current_type, depth==0 ? global_offset++ : 0, depth);
-  set_symbol_value($1, attr);
+    int current_offset;
+  
   if (depth == 0) {
-    if (current_type == INT) {
-      printf("LOADI(0)\n");
-    } else {
-      printf("LOADF(0.0)\n");
-    }
+      current_offset = global_offset++;
+  } else {
+      current_offset = local_offset++;
+  }
+
+  attribute attr = makeSymbol(current_type, current_offset, depth);
+  set_symbol_value($1, attr);
+  
+  if (current_type == INT) {
+    printf("LOADI(0)\n");
+  } else {
+    printf("LOADF(0.0)\n");
   }
 }
 ;
@@ -274,12 +297,21 @@ af : AF { printf("RESTOREBP // exiting block\n"); depth--; }
 aff : ID EQ exp               {
   attribute attr = get_symbol_value($1);
   if (attr == NULL) yyerror("Variable non déclarée");
+  
   if (attr->type == INT && $3 == FLOAT) {
     yyerror("Type incompatible: cannot assign float to int");
   } else if (attr->type == FLOAT && $3 == INT) {
     printf("I2F2 // converting second arg to float\n");
   }
-  printf("LOADI(%d)\nSTORE\n", attr->offset);
+
+  if (attr->depth == 0) {
+      printf("LOADI(%d)\n", attr->offset); 
+  } else {
+      printf("LOADBP\n");                  
+      printf("SHIFT(%d)\n", attr->offset); 
+  }
+  
+  printf("STORE\n");
 }
 ;
 
@@ -380,7 +412,15 @@ while : WHILE
   | ID                          {
     attribute attr = get_symbol_value($1);
     if (attr == NULL) yyerror("Variable non déclarée");
-    printf("LOADI(%d)\nLOAD\n", attr->offset);
+    
+    if (attr->depth == 0) {
+        printf("LOADI(%d)\n", attr->offset); 
+    } else {
+        printf("LOADBP\n");                  
+        printf("SHIFT(%d)\n", attr->offset); 
+    }
+    
+    printf("LOAD\n");
     $$ = attr->type;
   }
   | app                         {}
