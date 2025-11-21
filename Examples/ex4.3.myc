@@ -6,4 +6,3 @@ z=5;
 while (x < y) z = z+y;
 z;
 }
-

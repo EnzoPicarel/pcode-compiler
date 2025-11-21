@@ -1,0 +1,5 @@
+Examples/*
+*~
+*.o
+*.myc
+*_pcode.c

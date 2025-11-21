@@ -214,7 +214,18 @@ faf : AF {
 
 // II. Block
 block:
-decl_list inst_list            {}
+  {
+    $<int_value>$ = local_offset; 
+    // On commence à 1 car l'offset 0 est pris par le SAVEBP dans la pile
+    local_offset = 1; 
+  }
+  decl_list inst_list            
+  {
+    // 2. SORTIE DE BLOC : Nettoyage
+    // On restaure l'offset du parent (pour qu'il puisse continuer à déclarer ses variables)
+    local_offset = $<int_value>1; 
+
+  }
 ;
 
 // III. Declarations
@@ -224,9 +235,6 @@ decl_list : decl_list decl PV
     } 
 |                            
     {
-       if (depth == 1) {
-           local_offset = 0;
-       }
     }
 ;
 
@@ -327,7 +335,12 @@ aff : ID EQ exp               {
   if (attr->depth == 0) {
       printf("LOADI(%d)\n", attr->offset); 
   } else {
-      printf("LOADBP\n");                  
+      printf("LOADBP\n");          
+      int diff = depth - attr->depth;
+      while (diff > 0) {
+          printf("LOAD // Accessing upper block\n");
+          diff--;
+      }       
       printf("SHIFT(%d)\n", attr->offset); 
   }
   
@@ -436,7 +449,14 @@ while : WHILE
     if (attr->depth == 0) {
         printf("LOADI(%d)\n", attr->offset); 
     } else {
-        printf("LOADBP\n");                  
+        printf("LOADBP\n");   
+        int diff = depth - attr->depth;
+        
+        // On remonte la chaîne des BP autant de fois que nécessaire
+        while (diff > 0) {
+            printf("LOAD // Accessing upper block (depth %d)\n", attr->depth);
+            diff--;
+        }               
         printf("SHIFT(%d)\n", attr->offset); 
     }
     
