@@ -338,7 +338,7 @@ aff : ID EQ exp               {
       printf("LOADBP\n");          
       int diff = depth - attr->depth;
       while (diff > 0) {
-          printf("LOAD // Accessing upper block\n");
+          printf("LOAD // accessing upper block depth %d\n", attr->depth);
           diff--;
       }       
       printf("SHIFT(%d)\n", attr->offset); 
@@ -454,7 +454,7 @@ while : WHILE
         
         // On remonte la chaîne des BP autant de fois que nécessaire
         while (diff > 0) {
-            printf("LOAD // Accessing upper block (depth %d)\n", attr->depth);
+            printf("LOAD // accessing upper block depth %d\n", attr->depth);
             diff--;
         }               
         printf("SHIFT(%d)\n", attr->offset); 
