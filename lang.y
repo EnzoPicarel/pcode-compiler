@@ -173,13 +173,17 @@ po: PO {end_glob_var_decl();}  // dirty trick to end function init_glob_var() de
 fun_head : ID po PF            {
   current_fun_name = $1;
   // Pas de déclaration de fonction à l'intérieur de fonctions !
-  if (depth>0) yyerror("Function must be declared at top level~!\n");
-  }
+  if (depth > 0) yyerror("Function must be declared at top level~!\n");
+  
+  printf("void pcode_%s() {\n", current_fun_name);
+}
 
 | ID po params PF              {
    current_fun_name = $1;
    // Pas de déclaration de fonction à l'intérieur de fonctions !
-  if (depth>0) yyerror("Function must be declared at top level~!\n");
+   if (depth > 0) yyerror("Function must be declared at top level~!\n");
+   
+   printf("void pcode_%s() {\n", current_fun_name);
  }
 ;
 
@@ -190,24 +194,17 @@ params: type ID vir params     {} // récursion droite pour numéroter les param
 vir : VIR                      {}
 ;
 
-fun_body : fao block faf       {
-  if (strcmp(current_fun_name, "main") == 0) {
-    printf("}\n");
-  }
-}
+fun_body : fao block faf       {}
 ;
 
 fao : AO {
-  if (strcmp(current_fun_name, "main") == 0) {
-    depth++;                    // profondeur 1 dans la fonction
-    printf("void pcode_main() {\n");
-  }
+  depth++;
 }
 ;
+
 faf : AF {
-  if (strcmp(current_fun_name, "main") == 0) {
-    depth--;
-  }
+  printf("}\n");
+  depth--;
 }
 ;
 
@@ -433,9 +430,9 @@ while : WHILE
 
 // V. Expressions
 
-  exp
-// V.1 Exp. arithmetiques
-  : MOINS exp %prec UNA         {printf("NEGI\n");}
+// V.1 Expressions Arithmétiques
+
+exp : MOINS exp %prec UNA       { printf("NEGI\n"); }
           // -x + y lue comme (- x) + y  et pas - (x + y)
   | exp PLUS exp                {$$ = make_code_aryth($1, "ADD", $3);}
   | exp MOINS exp               {$$ = make_code_aryth($1, "SUB", $3);}
