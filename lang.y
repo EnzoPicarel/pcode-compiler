@@ -162,9 +162,10 @@ int make_code_rel(int type1, const char* op, int type2) {
 %start prog  
 
 // liste de tous les type des attributs des non terminaux que vous voulez manipuler l'attribut (il faudra en ajouter plein ;-) )
-%type <type_value> type exp  typename
+%type <type_value> type exp typename app
 %type <string_value> fun_head
 %type <label_value> bool_exp
+%type <int_value> params args arglist
 
 %%
 
@@ -188,28 +189,43 @@ glob_fun_list : glob_fun_list fun {}
 
 fun : type fun_head fun_body   {}
 ;
-
-po: PO {end_glob_var_decl();}  // dirty trick to end function init_glob_var() definition in target code
   
-fun_head : ID po PF            {
+fun_head : ID PO PF            {
+  end_glob_var_decl();
+  
   current_fun_name = $1;
-  // Pas de déclaration de fonction à l'intérieur de fonctions !
-  if (depth > 0) yyerror("Function must be declared at top level~!\n");
+  attribute attr = makeSymbol(current_type, 0, 0); 
+  set_symbol_value($1, attr);
   
+  if (depth > 0) yyerror("Function must be declared at top level~!\n");
   printf("void pcode_%s() {\n", current_fun_name);
 }
 
-| ID po params PF              {
+| ID PO params PF              {
+   end_glob_var_decl();
+
    current_fun_name = $1;
-   // Pas de déclaration de fonction à l'intérieur de fonctions !
-   if (depth > 0) yyerror("Function must be declared at top level~!\n");
+   attribute attr = makeSymbol(current_type, $3, 0);
+   set_symbol_value($1, attr);
    
+   if (depth > 0) yyerror("Function must be declared at top level~!\n");
    printf("void pcode_%s() {\n", current_fun_name);
  }
 ;
 
-params: type ID vir params     {} // récursion droite pour numéroter les paramètres du dernier au premier
-| type ID                      {}
+params: type ID vir params     {
+    attribute attr = makeSymbol($1, -($4 + 1), 1); 
+    set_symbol_value($2, attr);
+    
+    $$ = $4 + 1; //nombre de paramètre
+}
+| type ID                      {
+    attribute attr = makeSymbol($1, -1, 1);
+    set_symbol_value($2, attr);
+    
+    $$ = 1; 
+}
+;
 
 
 vir : VIR                      {}
@@ -240,13 +256,10 @@ faf : AF {
 block:
   {
     $<int_value>$ = local_offset; 
-    // On commence à 1 car l'offset 0 est pris par le SAVEBP dans la pile
     local_offset = 1; 
   }
   decl_list inst_list            
   {
-    // 2. SORTIE DE BLOC : Nettoyage
-    // On restaure l'offset du parent (pour qu'il puisse continuer à déclarer ses variables)
     local_offset = $<int_value>1; 
 
   }
@@ -326,7 +339,7 @@ pv : PV                       {}
 ;
  
 inst:
-ao block af                   {}
+  ao block af                 {}
 | exp pv                      {}
 | aff pv                      {}
 | ret pv                      {}
@@ -374,8 +387,33 @@ aff : ID EQ exp               {
 
 
 // IV.2 Return
-ret : RETURN exp              {}
-| RETURN PO PF                {}
+ret : RETURN exp             
+{
+    if (strcmp(current_fun_name, "main") == 0) {
+        printf("return;\n");
+    }
+    else {
+        attribute attr = get_symbol_value(current_fun_name);
+        int nb_params = attr->offset;
+        
+        printf("LOADBP\n");
+        int d = depth;
+        while (d > 1) { 
+            printf("LOAD // remonte au parent (depth %d -> %d)\n", d, d-1);
+            d--;
+        }
+        printf("SHIFT(%d)\n", -(nb_params + 1));
+        printf("STORE // ecriture valeur de retour\n");
+        
+        d = depth;
+        while (d > 0) {
+            printf("RESTOREBP // fermeture bloc depth %d\n", d);
+            d--;
+        }
+
+        printf("return;\n");
+    }
+}
 ;
 
 // IV.3. Conditionelles
@@ -580,17 +618,24 @@ bool_exp :
 // V.3 Applications de fonctions
 
 
-app : fid PO args PF          {}
+app : ID PO 
+      { 
+        printf("LOADI(0) // reservation retour\n"); 
+      }
+      args PF          
+      {
+        printf("CALL(pcode_%s)\n", $1);
+        printf("DROP(%d) // nettoyage args\n", $4);
+        $$ = INT;
+      }
 ;
 
-fid : ID                      {}
-
-args :  arglist               {}
-|                             {}
+args :  arglist               { $$ = $1; }
+|                             { $$ = 0; }
 ;
 
-arglist : arglist VIR exp     {} // récursion gauche pour empiler les arguements de la fonction de gauche à droite
-| exp                         {}
+arglist : arglist VIR exp     { $$ = $1 + 1; }
+| exp                         { $$ = 1; }
 ;
 
 
