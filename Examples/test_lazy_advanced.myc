@@ -1,0 +1,22 @@
+int main() {
+    int score;
+    score = 0;
+
+    if (1 || (1/0)) {
+        score = score + 1;
+    }
+
+    if ( ! (0 && (1/0)) ) {
+        score = score + 2;
+    }
+
+    if ( (0 || 1) && (1 || (1/0)) ) {
+        score = score + 4;
+    }
+
+    if ( (1 && 0) && (1/0) ) {
+        score = 0;
+    }
+
+    return score; 
+}

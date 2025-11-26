@@ -1,0 +1,18 @@
+int glob;
+
+int main() {
+    int loc1;
+    glob = 10;
+    loc1 = 5;
+
+    while (loc1 > 0) {
+        int loc2;
+        loc2 = 2; 
+        
+        glob = glob + loc2; 
+
+        loc1 = loc1 - 1;
+    }
+
+    return glob;
+}

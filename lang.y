@@ -26,6 +26,8 @@ char * current_fun_name;
 
 int label_count = 0;
 
+int bool_count = 0;
+
 %}
 
 %union { 
@@ -90,7 +92,26 @@ void end_glob_var_decl(){
 
 // Votre code C peut aller ci-dessous pour factoriser (un peu) le code des actions semantiques
  
+int new_bool() {
+    return bool_count++;
+}
 
+// Gère les types avant comparaison
+void make_code_comp(int type1, const char* op, int type2) {
+    if (type1 == INT && type2 == FLOAT) {
+        printf("I2F1\n");
+        printf("%sF\n", op);
+    } else if (type1 == FLOAT && type2 == INT) {
+        printf("I2F2\n");
+        printf("%sF\n", op);
+    } else if (type1 == FLOAT && type2 == FLOAT) {
+        printf("%sF\n", op);
+    } else {
+        printf("%sI\n", op);
+    }
+}
+
+// Gère les opérations arithmétiques
  int make_code_aryth(int type1, const char* op, int type2) {
     int result_type;
 
@@ -115,7 +136,7 @@ void end_glob_var_decl(){
     return result_type;
 }
 
-/* Gère les comparaisons (renvoie toujours un INT) */
+// Gère les comparaisons (renvoie toujours un INT)
 int make_code_rel(int type1, const char* op, int type2) {
     if (type1 == INT && type2 == FLOAT) {
         printf("I2F1 // converting first arg to float\n");
@@ -143,7 +164,7 @@ int make_code_rel(int type1, const char* op, int type2) {
 // liste de tous les type des attributs des non terminaux que vous voulez manipuler l'attribut (il faudra en ajouter plein ;-) )
 %type <type_value> type exp  typename
 %type <string_value> fun_head
-%type <int_value> if else while
+%type <label_value> bool_exp
 
 %%
 
@@ -199,10 +220,16 @@ fun_body : fao block faf       {}
 
 fao : AO {
   depth++;
+  printf("SAVEBP // entering function\n");
 }
 ;
 
 faf : AF {
+  if (strcmp(current_fun_name, "main") != 0) {
+      printf("RESTOREBP // exiting function\n");
+  } else {
+      printf("// Main function: skip RESTOREBP\n");
+  }
   printf("}\n");
   depth--;
 }
@@ -357,25 +384,22 @@ ret : RETURN exp              {}
 //           avec ELSE en entrée (voir y.output)
 
 cond :
-  if bool_cond 
+  IF PO bool_exp PF 
     { 
-      printf("IFN(False_%d)\n", $1); 
-      printf("// la condition %d est vraie\n", $1);
+      printf("True_%d:\n", $3); 
     }
   inst  
-  elsop       
+  else_part
     {
-      printf("// Fin conditionelle %d\n", $1);
     }
 ;
 
-elsop : 
-  else 
+else_part : 
+  ELSE 
   { 
     int id = $<label_value>-3; 
     printf("GOTO(End_%d)\n", id);
     printf("False_%d:\n", id);
-    printf("// la condition %d est fausse\n", id);
   }
   inst              
   {
@@ -386,11 +410,10 @@ elsop :
   { 
     int id = $<label_value>-3;
     printf("False_%d:\n", id);
-    printf("// la condition %d est fausse\n", id);
   } 
 ;
 
-bool_cond : PO exp PF         {}
+/* bool_cond : PO exp PF         {}
 ;
 
 if : IF                       
@@ -401,31 +424,35 @@ if : IF
 ;
 
 else : ELSE                   {}
-;
+; */
 
 // IV.4. Iterations
 
-loop : while while_cond 
+loop : 
+    WHILE 
     {
-      printf("IFN(EndLoop_%d)\n", $1);
-      printf("// Debut boucle while %d\n", $1);
+      $1 = label_count++; 
+      printf("StartLoop_%d:\n", $1);
+    }
+    PO bool_exp PF 
+    {
+      printf("True_%d:\n", $4);
     }
   inst
     {
       printf("GOTO(StartLoop_%d)\n", $1);
-      printf("//Fin boucle while %d\n", $1);
-      printf("EndLoop_%d:\n", $1);
+      printf("False_%d:\n", $4);
     }
 ;
 
-while_cond : PO exp PF        {}
+/* while_cond : PO exp PF        {}
 
 while : WHILE                 
     { 
       $$ = label_count++; 
       printf("StartLoop_%d: // chargement condition boucle while %d\n", $$, $$); 
     }
-;
+; */
 
 
 // V. Expressions
@@ -467,7 +494,7 @@ exp : MOINS exp %prec UNA       { printf("NEGI\n"); }
 
 // V.2. Booléens
 
-| NOT exp %prec UNA           
+/* | NOT exp %prec UNA           
     { 
       printf("NOT\n"); 
       $$ = INT; 
@@ -489,6 +516,65 @@ exp : MOINS exp %prec UNA       { printf("NEGI\n"); }
       $$ = INT; 
     }
 
+; */
+
+// V.2.bis Booléens Paresseux (bool_exp)
+
+bool_exp : 
+  exp INF exp {
+      $$ = new_bool();
+      make_code_comp($1, "LT", $3); 
+      printf("IFN(False_%d)\n", $$); 
+      printf("GOTO(True_%d)\n", $$);
+  }
+| exp SUP exp {
+      $$ = new_bool();
+      make_code_comp($1, "GT", $3);
+      printf("IFN(False_%d)\n", $$);
+      printf("GOTO(True_%d)\n", $$);
+  }
+| exp EQUAL exp {
+      $$ = new_bool();
+      make_code_comp($1, "EQ", $3);
+      printf("IFN(False_%d)\n", $$);
+      printf("GOTO(True_%d)\n", $$);
+  }
+| exp DIFF exp {
+      $$ = new_bool();
+      make_code_comp($1, "NEQ", $3);
+      printf("IFN(False_%d)\n", $$);
+      printf("GOTO(True_%d)\n", $$);
+  }
+
+| bool_exp AND 
+  { printf("True_%d:\n", $1); } 
+  bool_exp 
+  {
+      $$ = $4;
+      printf("False_%d: GOTO(False_%d)\n", $1, $4);
+  }
+
+| bool_exp OR 
+  { printf("False_%d:\n", $1); } 
+  bool_exp 
+  {
+      $$ = $4;
+      printf("True_%d: GOTO(True_%d)\n", $1, $4);
+  }
+
+| NOT bool_exp {
+      $$ = new_bool();
+      printf("True_%d: GOTO(False_%d)\n", $2, $$);
+      printf("False_%d: GOTO(True_%d)\n", $2, $$);
+  }
+
+| PO bool_exp PF { $$ = $2; }
+
+| exp {
+      $$ = new_bool();
+      printf("IFN(False_%d)\n", $$);
+      printf("GOTO(True_%d)\n", $$);
+  }
 ;
 
 // V.3 Applications de fonctions
