@@ -468,13 +468,18 @@ bool_exp :
 
 app : ID PO 
       { 
-        printf("LOADI(0) // reservation retour\n"); 
+        attribute attr = get_symbol_value($1);
+        if (attr == NULL) yyerror("Function undeclared");
+        
+        if (attr->type == INT) printf("LOADI(0)\n");
+        else if (attr->type == FLOAT) printf("LOADF(0.0)\n");
       }
       args PF          
       {
+        attribute attr = get_symbol_value($1);
         printf("CALL(pcode_%s)\n", $1);
         printf("DROP(%d) // nettoyage args\n", $4);
-        $$ = INT;
+        $$ = attr->type;
       }
 ;
 
