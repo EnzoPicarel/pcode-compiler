@@ -1,0 +1,20 @@
+int g;
+
+int touch() {
+    g = g + 1;
+    return 1;
+}
+
+void main() {
+    g = 0;
+    
+    if (1 < 0 && touch() == 1) {
+        g = g + 100;
+    }
+    
+    if (1 > 0 || touch() == 1) {
+        g = g + 10;
+    }
+    
+    return g;
+}

@@ -1,0 +1,22 @@
+int x;
+
+void main() {
+    x = 100;
+    
+    {
+        int x;
+        x = 5;
+        
+        {
+            int x;
+            x = 1;
+        }
+        
+        x = x + 1;
+        if (x == 6) {
+             x = 0;
+        }
+    }
+    
+    return x; 
+}

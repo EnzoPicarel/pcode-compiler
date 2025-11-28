@@ -1,0 +1,16 @@
+int val;
+
+void reset() {
+    val = 0;
+}
+
+void inc(int amount) {
+    val = val + amount;
+}
+
+void main() {
+    reset();
+    inc(5);
+    inc(10);
+    return val;
+}
