@@ -1,7 +1,6 @@
 *~
 *.o
 *_pcode.c
-Examples/*
 *.myc
 *.output
 *.tab.c
