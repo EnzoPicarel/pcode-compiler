@@ -178,9 +178,6 @@ fao : AO {
 ;
 
 faf : AF {
-  if (strcmp(current_fun_name, "main") != 0) {
-      printf("RESTOREBP // exiting function\n");
-  }
   printf("}\n");
   depth--;
 }
@@ -306,17 +303,18 @@ ret : RETURN exp
         attribute attr = get_symbol_value(current_fun_name);
         int nb_params = attr->offset;
         
+        printf("// Loading function return adress\n");
         printf("LOADBP\n");
         int d = depth;
         while (d > 1) { 
-            printf("LOAD // remonte au parent (depth %d -> %d)\n", d, d-1);
+            printf("LOAD\n");
             d--;
         }
-        printf("SHIFT(%d)\n", -(nb_params + 1));
-        printf("STORE // ecriture valeur de retour\n");
+        printf("SHIFT(%d) // apply returned value offset %d\n", -(nb_params + 1), -(nb_params + 1));
+        printf("STORE // store returned value\n");
         
         d = depth;
-        while (d > 0) {
+        while (d > 1) {
             printf("RESTOREBP // fermeture bloc depth %d\n", d);
             d--;
         }
@@ -483,7 +481,9 @@ app : ID PO
         printf("SAVEBP\n");
         printf("CALL(pcode_%s)\n", $1);
         printf("RESTOREBP\n");
-        printf("DROP(%d) // nettoyage args\n", $4);
+        if ($4 > 0) {
+            printf("DROP(%d) //remove %d fun. parameters from stack\n ", $4, $4);
+        }
         $$ = attr->type;
       }
 ;
