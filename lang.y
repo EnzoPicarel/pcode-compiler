@@ -482,7 +482,7 @@ app : ID PO
         printf("CALL(pcode_%s)\n", $1);
         printf("RESTOREBP\n");
         if ($4 > 0) {
-            printf("DROP(%d) //remove %d fun. parameters from stack\n ", $4, $4);
+            printf("DROP(%d) //remove %d fun. parameters from stack\n", $4, $4);
         }
         $$ = attr->type;
       }
