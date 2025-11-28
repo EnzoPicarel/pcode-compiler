@@ -115,7 +115,7 @@ int make_code_aryth(int type1, const char* op, int type2) {
 
 %%
 
- // O. Déclaration globale
+// O. Déclaration globale
 
 prog : glob_decl_list {}
 ;
@@ -191,6 +191,7 @@ faf : AF {
 
 
 // II. Block
+
 block:
   {
     $<int_value>$ = local_offset; 
@@ -285,10 +286,10 @@ aff : ID EQ exp               {
   if (attr->depth == 0) {
       printf("LOADI(%d)\n", attr->offset); 
   } else {
-      printf("LOADBP\n");          
+      printf("LOADBP\n");
       int diff = depth - attr->depth;
       while (diff > 0) {
-          printf("LOAD // accessing upper block depth %d\n", attr->depth);
+          printf("LOAD\n");
           diff--;
       }       
       printf("SHIFT(%d)\n", attr->offset); 
@@ -298,10 +299,10 @@ aff : ID EQ exp               {
 ;
 
 // IV.2 Return
+
 ret : RETURN exp             
 {
     if (strcmp(current_fun_name, "main") == 0) {
-        // Main : on laisse la valeur au sommet
         printf("return;\n");
     }
     else {
@@ -379,6 +380,7 @@ loop :
 ;
 
 // V. Expressions
+
 // V.1 Expressions Arithmétiques
 
 exp : MOINS exp %prec UNA       { printf("NEGI\n"); }
@@ -394,10 +396,10 @@ exp : MOINS exp %prec UNA       { printf("NEGI\n"); }
     if (attr->depth == 0) {
         printf("LOADI(%d)\n", attr->offset); 
     } else {
-        printf("LOADBP\n");   
+        printf("LOADBP\n");
         int diff = depth - attr->depth;
         while (diff > 0) {
-            printf("LOAD // accessing upper block depth %d\n", attr->depth);
+            printf("LOAD\n");
             diff--;
         }               
         printf("SHIFT(%d)\n", attr->offset); 
