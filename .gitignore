@@ -9,3 +9,4 @@ Examples/*
 *.yy.c
 *.yy.h
 lang
+._*
