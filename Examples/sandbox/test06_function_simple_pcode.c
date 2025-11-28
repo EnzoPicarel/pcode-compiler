@@ -26,10 +26,10 @@ LOADBP
 SHIFT(-1)
 LOAD
 ADDI
+// Loading function return adress
 LOADBP
-SHIFT(-4)
-STORE // ecriture valeur de retour
-RESTOREBP // fermeture bloc depth 1
+SHIFT(-4) // apply returned value offset -4
+STORE // store returned value
 return;
 }
 void pcode_main() {
@@ -41,7 +41,7 @@ LOADI(30)
 SAVEBP
 CALL(pcode_add3)
 RESTOREBP
-DROP(3) // nettoyage args
+DROP(3) //remove 3 fun. parameters from stack
 LOADBP
 SHIFT(1)
 STORE

@@ -23,10 +23,10 @@ ADDI
 LOADI(0)
 STORE
 LOADI(1)
+// Loading function return adress
 LOADBP
-SHIFT(-1)
-STORE // ecriture valeur de retour
-RESTOREBP // fermeture bloc depth 1
+SHIFT(-1) // apply returned value offset -1
+STORE // store returned value
 return;
 }
 void pcode_main() {
@@ -43,7 +43,6 @@ LOADI(0)
 SAVEBP
 CALL(pcode_touch)
 RESTOREBP
-DROP(0) // nettoyage args
 LOADI(1)
 EQI
 IFN(False_1)
@@ -69,7 +68,6 @@ LOADI(0)
 SAVEBP
 CALL(pcode_touch)
 RESTOREBP
-DROP(0) // nettoyage args
 LOADI(1)
 EQI
 IFN(False_3)

@@ -30,12 +30,12 @@ SHIFT(-1)
 LOAD
 LOADI(1)
 ADDI
+// Loading function return adress
 LOADBP
-LOAD // remonte au parent (depth 2 -> 1)
-SHIFT(-3)
-STORE // ecriture valeur de retour
+LOAD
+SHIFT(-3) // apply returned value offset -3
+STORE // store returned value
 RESTOREBP // fermeture bloc depth 2
-RESTOREBP // fermeture bloc depth 1
 return;
 RESTOREBP // exiting block
 False_0:
@@ -68,13 +68,13 @@ LOADI(1)
 SAVEBP
 CALL(pcode_ackermann)
 RESTOREBP
-DROP(2) // nettoyage args
+DROP(2) //remove 2 fun. parameters from stack
+// Loading function return adress
 LOADBP
-LOAD // remonte au parent (depth 2 -> 1)
-SHIFT(-3)
-STORE // ecriture valeur de retour
+LOAD
+SHIFT(-3) // apply returned value offset -3
+STORE // store returned value
 RESTOREBP // fermeture bloc depth 2
-RESTOREBP // fermeture bloc depth 1
 return;
 RESTOREBP // exiting block
 False_2:
@@ -96,15 +96,15 @@ SUBI
 SAVEBP
 CALL(pcode_ackermann)
 RESTOREBP
-DROP(2) // nettoyage args
+DROP(2) //remove 2 fun. parameters from stack
 SAVEBP
 CALL(pcode_ackermann)
 RESTOREBP
-DROP(2) // nettoyage args
+DROP(2) //remove 2 fun. parameters from stack
+// Loading function return adress
 LOADBP
-SHIFT(-3)
-STORE // ecriture valeur de retour
-RESTOREBP // fermeture bloc depth 1
+SHIFT(-3) // apply returned value offset -3
+STORE // store returned value
 return;
 }
 void pcode_main() {
@@ -114,6 +114,6 @@ LOADI(2)
 SAVEBP
 CALL(pcode_ackermann)
 RESTOREBP
-DROP(2) // nettoyage args
+DROP(2) //remove 2 fun. parameters from stack
 return;
 }

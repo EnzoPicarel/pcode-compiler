@@ -34,19 +34,18 @@ void pcode_main() {
 SAVEBP
 CALL(pcode_reset)
 RESTOREBP
-DROP(0) // nettoyage args
 LOADI(0)
 LOADI(5)
 SAVEBP
 CALL(pcode_inc)
 RESTOREBP
-DROP(1) // nettoyage args
+DROP(1) //remove 1 fun. parameters from stack
 LOADI(0)
 LOADI(10)
 SAVEBP
 CALL(pcode_inc)
 RESTOREBP
-DROP(1) // nettoyage args
+DROP(1) //remove 1 fun. parameters from stack
 LOADI(0)
 LOAD
 return;
