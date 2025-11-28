@@ -174,15 +174,12 @@ fun_body : fao block faf {}
 
 fao : AO {
   depth++;
-  printf("SAVEBP // entering function\n");
 }
 ;
 
 faf : AF {
   if (strcmp(current_fun_name, "main") != 0) {
       printf("RESTOREBP // exiting function\n");
-  } else {
-      printf("// Main function: skip RESTOREBP\n");
   }
   printf("}\n");
   depth--;
@@ -383,7 +380,11 @@ loop :
 
 // V.1 Expressions Arithmétiques
 
-exp : MOINS exp %prec UNA       { printf("NEGI\n"); }
+exp : MOINS exp %prec UNA       { 
+    if ($2 == INT) printf("MINUSI\n");
+    else printf("MINUSF\n");
+    $$ = $2;
+  }
   | exp PLUS exp                {$$ = make_code_aryth($1, "ADD", $3);}
   | exp MOINS exp               {$$ = make_code_aryth($1, "SUB", $3);}
   | exp STAR exp                {$$ = make_code_aryth($1, "MULT", $3);}
@@ -479,7 +480,9 @@ app : ID PO
       args PF          
       {
         attribute attr = get_symbol_value($1);
+        printf("SAVEBP\n");
         printf("CALL(pcode_%s)\n", $1);
+        printf("RESTOREBP\n");
         printf("DROP(%d) // nettoyage args\n", $4);
         $$ = attr->type;
       }
