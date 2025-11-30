@@ -26,9 +26,9 @@ FONCTIONNALITÉS IMPLÉMENTÉES:
 - Structures de contrôle (if, if/else, while)
 - Variables locales et gestion des blocs imbriqués (Scope)
 - Booléens paresseux (Short-circuit evaluation && et ||)
-- Fonctions simples (Appels, paramètres, valeur de retour)
+- Fonctions non récursives (Appels, paramètres, valeur de retour)
 - Gestion des types de retour (Void vs Int/Float)
-- Fonctions récursives (Fibonacci, Ackermann fonctionnels)
+- Fonctions récursives (Fibonacci, Ackermann)
 
 COMPILATION:
 Pour compiler le compilateur lui-même:
